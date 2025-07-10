@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>提示词与图片展示</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f8f9fa;
+            padding: 0;
+            margin: 0;
+        }
+        .container {
+            width: 100%;
+            max-width: 100%;
+            margin: 0;
+            padding: 0;
+        }
+        header {
+            text-align: center;
+            margin-bottom: 20px;
+            padding: 20px 0;
+            background: linear-gradient(135deg, #bebbce 0%, #fcc325 100%);
+            color: white;
+            border-radius: 0;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+        .grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            justify-content: center;
+            padding: 10px;
+        }
+        .card {
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            transition: transform 0.3s ease;
+            width: 153px;
+            margin-bottom: 15px;
+            position: relative;
+        }
+        .card:hover {
+            transform: translateY(-5px);
+        }
+        .card-img {
+            width: 100%;
+            height: 230px;
+            object-fit: contain;
+            display: block;
+        }
+        .card-content {
+            padding: 15px;
+        }
+        .card-text {
+            color: #2c3e50;
+            font-size: 1.1rem;
+            font-weight: 500;
+            text-align: center;
+        }
+        footer {
+            text-align: center;
+            margin-top: 40px;
+            padding: 20px;
+            color: #7f8c8d;
+        }
+        .error-message {
+            text-align: center;
+            padding: 20px;
+            background-color: #f0f0f0;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .error-message h2 {
+            font-size: 1.5rem;
+            margin-bottom: 10px;
+        }
+        .error-message p {
+            margin-bottom: 15px;
+        }
+        /* 复制按钮样式 */
+        .copy-button {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background-color: rgba(0, 0, 0, 0.6);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 5px 8px;
+            font-size: 12px;
+            cursor: pointer;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .card:hover .copy-button {
+            opacity: 1;
+        }
+        
+        /* 提示消息样式 */
+        .copy-tooltip {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background-color: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 5px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>提示词与图片展示</h1>
+            <p>精选提示词与相关视觉内容</p>
+        </header>
+        
+        <div class="grid">
+            <!-- 卡片将通过 JavaScript 动态加载 -->
+        </div>
+        
+        <footer>
+            <p> 2025 提示词库 | 持续更新中</p>
+        </footer>
+    </div>
+    
+    <script>
+        // 处理转义字符的函数
+        function removeEscapeCharacters(text) {
+            // 替换常见的转义字符
+            return text.replace(/\\([()[\]{}])/g, '$1');
+        }
+        
+        // 复制文本到剪贴板的函数
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(
+                function() {
+                    console.log('复制成功: ' + text);
+                    return true;
+                },
+                function(err) {
+                    console.error('复制失败: ', err);
+                    return false;
+                }
+            );
+        }
+        
+        // 加载 pair.json 文件并创建卡片
+        document.addEventListener('DOMContentLoaded', function() {
+            // 使用相对路径加载 JSON 文件
+            fetch('./pair.json')
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP 错误: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('成功加载数据，项目数量:', data.length);
+                    const grid = document.querySelector('.grid');
+                    
+                    // 清空现有内容
+                    grid.innerHTML = '';
+                    
+                    // 只显示前 20 个项目，避免页面过长
+                    const itemsToShow = data;
+                    
+                    itemsToShow.forEach((item, index) => {
+                        try {
+                            // 提取图片文件名（处理 Windows 和 UNIX 路径格式）
+                            let imageName;
+                            if (item.path.includes('\\')) {
+                                // Windows 路径
+                                imageName = item.path.split('\\').pop();
+                            } else if (item.path.includes('/')) {
+                                // UNIX 路径
+                                imageName = item.path.split('/').pop();
+                            } else {
+                                // 已经是文件名
+                                imageName = item.path;
+                            }
+                            
+                            const imageUrl = `./images/${imageName}`; // 构建相对路径
+                            console.log(`项目 ${index}: 图片路径 = ${imageUrl}, 提示词 = ${item.prompt}`);
+                            
+                            // 创建卡片元素
+                            const card = document.createElement('div');
+                            card.className = 'card';
+                            
+                            // 处理提示词中的转义字符
+                            const cleanPrompt = removeEscapeCharacters(item.prompt);
+                            
+                            // 创建图片元素
+                            const img = document.createElement('img');
+                            img.src = imageUrl;
+                            img.alt = item.prompt;
+                            img.className = 'card-img';
+                            
+                            // 添加图片加载错误处理
+                            img.onerror = function() {
+                                console.error(`图片加载失败: ${imageUrl}`);
+                                this.alt = '图片加载失败';
+                                this.style.backgroundColor = '#f0f0f0';
+                                this.style.display = 'flex';
+                                this.style.alignItems = 'center';
+                                this.style.justifyContent = 'center';
+                                this.style.color = '#999';
+                                this.style.fontSize = '14px';
+                                this.style.padding = '20px';
+                                this.style.textAlign = 'center';
+                                this.textContent = '图片加载失败';
+                            };
+                            
+                            // 创建复制按钮
+                            const copyButton = document.createElement('button');
+                            copyButton.className = 'copy-button';
+                            copyButton.textContent = '复制提示词';
+                            copyButton.onclick = function(e) {
+                                e.stopPropagation(); // 阻止事件冒泡
+                                
+                                // 复制提示词到剪贴板
+                                if (copyToClipboard(cleanPrompt)) {
+                                    // 创建提示消息
+                                    const tooltip = document.createElement('div');
+                                    tooltip.className = 'copy-tooltip';
+                                    tooltip.textContent = '已复制!';
+                                    card.appendChild(tooltip);
+                                    
+                                    // 显示提示消息
+                                    tooltip.style.display = 'block';
+                                    
+                                    // 2秒后隐藏提示消息
+                                    setTimeout(() => {
+                                        tooltip.style.display = 'none';
+                                        setTimeout(() => {
+                                            card.removeChild(tooltip);
+                                        }, 300);
+                                    }, 2000);
+                                }
+                            };
+                            
+                            // 创建卡片内容区域
+                            const cardContent = document.createElement('div');
+                            cardContent.className = 'card-content';
+                            
+                            // 创建描述文本（直接显示提示词，不需要标题）
+                            const text = document.createElement('p');
+                            text.className = 'card-text';
+                            text.textContent = cleanPrompt;
+                            
+                            // 组装卡片
+                            card.appendChild(img);
+                            card.appendChild(copyButton);
+                            cardContent.appendChild(text);
+                            card.appendChild(cardContent);
+                            
+                            // 添加到网格中
+                            grid.appendChild(card);
+                        } catch (cardError) {
+                            console.error(`创建卡片 ${index} 时出错:`, cardError);
+                        }
+                    });
+                })
+                .catch(error => {
+                    console.error('加载数据失败:', error);
+                    const grid = document.querySelector('.grid');
+                    grid.innerHTML = `<div class="error-message">
+                        <h2>加载数据失败</h2>
+                        <p>${error.message}</p>
+                        <p>请确保已启动 Python 服务器：<code>python server.py</code></p>
+                        <p>然后访问: <a href="http://localhost:8000">http://localhost:8000</a></p>
+                    </div>`;
+                });
+        });
+    </script>
+</body>
+</html>
