@@ -13,6 +13,7 @@ static/
 ├─ pair.json           # 角色与提示词映射
 ├─ images/             # 角色图片
 └─ README.md
+└─ extract_webp.py     # 爬取角色图片的爬虫程序
 ```
 
 ## 快速开始
